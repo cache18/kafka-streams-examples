@@ -16,7 +16,7 @@ import org.springframework.kafka.support.serializer.JsonSerde;
 import java.util.List;
 
 //@Configuration
-public class PremiumOfferTwoStream {
+public class PremiumOfferThreeStream {
 
     @Bean
     public KStream<String, PremiumOfferMessage> kStreamPremiumOffer(StreamsBuilder builder) {
@@ -30,20 +30,22 @@ public class PremiumOfferTwoStream {
 
         var filterLevel = List.of("gold", "diamond");
 
-        var userTable = builder.table("t-commodity-premium-user", Consumed.with(stringSerde, userSerde))
-                .filter((k, v) -> v.getLevel() == null || filterLevel.contains(v.getLevel().toLowerCase()));
+        builder.stream("t-commodity-premium-user", Consumed.with(stringSerde, userSerde))
+                .filter((k, v) -> filterLevel.contains(v.getLevel().toLowerCase()))
+                .to("t-commodity-premium-user-filtered", Produced.with(stringSerde, userSerde));
 
-        var offerStream = purchaseStream.leftJoin(userTable, this::joiner,
-                Joined.with(stringSerde, purchaseSerde, userSerde));
+        var userTable = builder.globalTable("t-commodity-premium-user-filtered", Consumed.with(stringSerde, userSerde));
 
-        offerStream.to("t-commodity-premium-offer-two", Produced.with(stringSerde, offerSerde));
+        var offerStream = purchaseStream.join(userTable, (key, value) -> key, this::joiner);
+
+        offerStream.to("t-commodity-premium-offer-three", Produced.with(stringSerde, offerSerde));
 
         return offerStream;
     }
 
     private PremiumOfferMessage joiner(PremiumPurchaseMessage purchase, PremiumUserMessage user) {
         PremiumOfferMessage offerMessage = new PremiumOfferMessage();
-        offerMessage.setLevel(user != null ? user.getLevel() : "Free");
+        offerMessage.setLevel(user.getLevel());
         offerMessage.setUsername(purchase.getUsername());
         offerMessage.setPurchaseNumber(purchase.getPurchaseNumber());
         return offerMessage;
