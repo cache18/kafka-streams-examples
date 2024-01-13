@@ -1,5 +1,6 @@
 package com.course.kafka.config;
 
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +24,8 @@ public class KafkaStreamConfig {
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "3000");
+        props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
 
         return new KafkaStreamsConfiguration(props);
     }
